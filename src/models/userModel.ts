@@ -1,20 +1,33 @@
-import mongoose from 'mongoose';
+import mongoose, { Model, Document, Schema } from 'mongoose';
 import validator from 'validator';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
-interface UserDocument extends mongoose.Document {
+// Parameters needed to create and user
+interface UserAttrs {
   email: string;
   password: string;
-  roles: number;
-  passwordChangedAt: number;
-  passwordResetToken: string;
-  passwordResetExpires: number;
+  roles?: number[];
+}
+
+// Document interface description
+interface UserDocument extends Document {
+  email: string;
+  password: string;
+  roles: number[];
+  createdAt: Date;
+  passwordChangedAt?: number;
+  passwordResetToken?: string;
+  passwordResetExpires?: number;
   active: boolean;
 }
 
-interface UserModel extends mongoose.Model<any, {}> {}
+// New static methods of the model
+interface UserModel extends Model<any> {
+  build(attrs: UserAttrs): UserDocument;
+}
 
-const userSchema = new mongoose.Schema<UserDocument, UserModel>({
+const userSchema = new Schema<UserDocument, UserModel>({
   email: {
     type: String,
     required: [true, 'Please provide an email'],
@@ -31,17 +44,19 @@ const userSchema = new mongoose.Schema<UserDocument, UserModel>({
     type: Number,
     default: 1,
   },
-  passwordChangedAt: Number,
+  createdAt: {
+    type: Date,
+    default: Date.now()
+  },
+  passwordChangedAt: Date,
   passwordResetToken: String,
-  passwordResetExpires: Number,
+  passwordResetExpires: Date,
   active: {
     type: Boolean,
     default: true,
     select: false,
   },
 });
-
-const User = mongoose.model('User', userSchema);
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
@@ -52,7 +67,7 @@ userSchema.pre('save', async function (next) {
 });
 
 userSchema.pre('save', function (next) {
-  if(!this.isModified('password') || this.isNew) return next();
+  if (!this.isModified('password') || this.isNew) return next();
 
   this.passwordChangedAt = Date.now();
 
@@ -62,3 +77,28 @@ userSchema.pre('save', function (next) {
 userSchema.pre<UserModel>(/^find/, function (next) {
   this.find({ active: { $ne: false } });
 });
+
+userSchema.methods.correctPasswords = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+userSchema.methods.createPasswordResetToken = function () {
+  const resetToken = crypto.randomBytes(32).toString('hex');
+
+  this.passwordResetToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
+
+  return resetToken;
+};
+
+userSchema.statics.build = (attrs: UserAttrs) => {
+  return new User(attrs)
+}
+
+const User = mongoose.model<UserDocument, UserModel>('User', userSchema);
+
+export default User;
