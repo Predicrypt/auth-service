@@ -27,36 +27,47 @@ interface UserModel extends Model<any> {
   build(attrs: UserAttrs): UserDocument;
 }
 
-const userSchema = new Schema<UserDocument, UserModel>({
-  email: {
-    type: String,
-    required: [true, 'Please provide an email'],
-    unique: true,
-    validate: [validator.isEmail, 'Provide a valid email'],
+const userSchema = new Schema<UserDocument, UserModel>(
+  {
+    email: {
+      type: String,
+      required: [true, 'Please provide an email'],
+      unique: true,
+      validate: [validator.isEmail, 'Provide a valid email'],
+    },
+    password: {
+      type: String,
+      required: [true, 'You must provide a password'],
+      minlength: 8,
+      select: false,
+    },
+    roles: {
+      type: Number,
+      default: 1,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now(),
+    },
+    passwordChangedAt: Date,
+    passwordResetToken: String,
+    passwordResetExpires: Date,
+    active: {
+      type: Boolean,
+      default: true,
+      select: false,
+    },
   },
-  password: {
-    type: String,
-    required: [true, 'You must provide a password'],
-    minlength: 8,
-    select: false,
-  },
-  roles: {
-    type: Number,
-    default: 1,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now()
-  },
-  passwordChangedAt: Date,
-  passwordResetToken: String,
-  passwordResetExpires: Date,
-  active: {
-    type: Boolean,
-    default: true,
-    select: false,
-  },
-});
+  {
+    toJSON: {
+      transform(doc, ret) {
+        ret.id = ret._id;
+        delete ret._id;
+        delete ret.__v;
+      },
+    },
+  }
+);
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
@@ -96,8 +107,8 @@ userSchema.methods.createPasswordResetToken = function () {
 };
 
 userSchema.statics.build = (attrs: UserAttrs) => {
-  return new User(attrs)
-}
+  return new User(attrs);
+};
 
 const User = mongoose.model<UserDocument, UserModel>('User', userSchema);
 

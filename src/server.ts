@@ -5,14 +5,12 @@ import User from './models/userModel';
 
 dotenv.config({ path: './config.env' });
 
-if (!process.env.DATABASE_URI) {
+if (!process.env.DATABASE_URI || !process.env.JWT_KEY) {
   process.exit();
 }
 
-const DB = process.env.DATABASE_URI!;
-
 mongoose
-  .connect(DB, {
+  .connect(process.env.DATABASE_URI!, {
     useNewUrlParser: true,
     useCreateIndex: true,
     useFindAndModify: false,
