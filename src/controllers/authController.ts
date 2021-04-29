@@ -54,9 +54,25 @@ export const requestNewPassword = async (req: Request, res: Response) => {
 
   const user = await User.findOne({ email });
 
-  if(!user){
+  if (!user) {
     throw new NotFoundError();
   }
-  const resetToken = user.createPasswordResetToken()
+  const resetToken = user.createPasswordResetToken();
+
+  res.status(200).send({ resetToken });
 };
 
+export const changePassword = async (req: Request, res: Response) => {
+  const { password, passwordConfirm, passwordResetToken } = req.body;
+
+  if (password !== passwordConfirm) {
+    throw new BadRequestError('Passwords must be equals');
+  }
+
+  const user = await User.findOne({ passwordResetToken });
+
+  user.password = password;
+  await user.save();
+
+  res.status(201).send({ status: 'success' });
+};
