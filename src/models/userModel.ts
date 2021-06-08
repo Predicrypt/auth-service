@@ -39,7 +39,6 @@ const userSchema = new Schema<UserDocument, UserModel>(
       type: String,
       required: [true, 'You must provide a password'],
       minlength: 8,
-      select: false,
     },
     roles: {
       type: Number,
@@ -83,10 +82,6 @@ userSchema.pre('save', function (next) {
   this.passwordChangedAt = Date.now();
 
   next();
-});
-
-userSchema.pre<UserModel>(/^find/, function (next) {
-  this.find({ active: { $ne: false } });
 });
 
 userSchema.methods.correctPasswords = async function (candidatePassword) {

@@ -3,6 +3,8 @@ import { Request, Response } from 'express';
 import { BadRequestError, NotFoundError } from '@Predicrypt/common';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { UserRegisteredPublisher } from '../events/publishers/UserRegisteredPublisher';
+import { natsWrapper } from '../natsWrapper';
 
 export const signUp = async (req: Request, res: Response) => {
   const { email, password, passwordConfirm } = req.body;
@@ -12,12 +14,20 @@ export const signUp = async (req: Request, res: Response) => {
   }
 
   const newUser = await User.build({ email, password });
+  await newUser.save();
+
+  new UserRegisteredPublisher(natsWrapper.client).publish({
+    userId: newUser.id,
+    email: newUser.email,
+  });
+
+  res.status(201).send({ id: newUser.id });
 };
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email }).select('+password');
+  const user = await User.findOne({ email });
 
   if (!user || (await !bcrypt.compare(password, user.password))) {
     throw new BadRequestError('Incorrect email or password');
@@ -25,22 +35,18 @@ export const login = async (req: Request, res: Response) => {
 
   const jwtToken = jwt.sign(
     {
-      id: user.id,
+      id: user._id,
       email: email,
-      roles: user.roles,
     },
     process.env.JWT_KEY!,
     {
-      issuer: 'auth-service',
-      expiresIn: '2h',
+      expiresIn: '24h',
     }
   );
 
-  req.session = {
-    jwt: jwtToken,
-  };
+  req.session = { jwt: jwtToken };
 
-  res.status(201).send({ status: 'success' });
+  res.status(200).send({ status: 'success' });
 };
 
 export const logout = (req: Request, res: Response) => {
@@ -75,4 +81,9 @@ export const changePassword = async (req: Request, res: Response) => {
   await user.save();
 
   res.status(201).send({ status: 'success' });
+};
+
+export const getAllUsers = async (req: Request, res: Response) => {
+  const user = await User.find({});
+  res.status(200).send(user);
 };

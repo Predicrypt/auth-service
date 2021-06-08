@@ -1,0 +1,2 @@
+{"name":"NatsError","message":"Could not connect to server: Error: getaddrinfo EAI_AGAIN nats-srv","code":"CONN_ERR","chainedError":{"errno":"EAI_AGAIN","code":"EAI_AGAIN","syscall":"getaddrinfo","hostname":"nats-srv"},"level":"error"}
+{"name":"NatsError","message":"Could not connect to server: Error: getaddrinfo EAI_AGAIN nats-srv","code":"CONN_ERR","chainedError":{"errno":"EAI_AGAIN","code":"EAI_AGAIN","syscall":"getaddrinfo","hostname":"nats-srv"},"level":"error"}
